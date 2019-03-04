@@ -1,104 +1,715 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
 # Spyder project settings
 .spyderproject
 .spyproject
 
-# Rope project settings
-.ropeproject
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
 
-# mkdocs documentation
-/site
+This is a temporary script file.
 
-# mypy
-.mypy_cache/
+"""
+
+import numpy as np
+import pandas as pd
+import os
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+os.chdir(r'C:\Users\ramsey\Desktop\Metro College\Python Capstone') 
+
+train = pd.read_csv("Train_Loan_Home.csv")#### the training data
+test = pd.read_csv("Test_Loan_Home.csv")
+
+train['Trainsource']='train'## marking the data source
+test['Testsource']='test' 
+
+data=pd.concat([train,test],ignore_index=True, sort=True)
+
+#### Cross Tabing 
+Vis1 = pd.crosstab([data['Credit_History'], data['Gender']], data['Loan_Status'])
+Vis1.plot(kind='bar', stacked = False, color=['green', 'blue'], grid = False)
+
+
+Vis2 = pd.crosstab([data['Credit_History'], data['Property_Area']], data['Loan_Status'])
+Vis2.plot(kind='bar', stacked = True, color=['green', 'blue'], grid = False)
+
+Vis3 = pd.crosstab([data['Credit_History'], data['Property_Area']], data['Loan_Status'])
+Vis3.plot(kind='bar', stacked = False, color=['red', 'blue'], grid = False)
+
+
+#### Missing Values 
+
+from collections import Counter 
+Counter(data['Education'])
+Counter(data['Gender'])
+Counter(data['Loan_Amount_Term'])
+Counter(data['Loan_Status'])
+Counter(data['Married'])
+Counter(data['Property_Area'])
+Counter(data['Self_Employed'])
+Counter(data['Loan_ID'])
+Counter(data['Credit_History'])
+Counter(data['Dependents'])
+Counter(data['LoanAmount'])
+
+### My perspective: replacing categorical features with the mode for missing values is problemtic 
+###  To avoid biasness, "Unknown" used as a meaningful category to replace the missing values   
+
+data['Education'] =data['Education'].fillna('Unknown') 
+data['Gender'] =data['Gender'].fillna('Unknown') 
+data['Loan_Amount_Term'] =data['Loan_Amount_Term'].fillna('Unknown') 
+data['Married'] =data['Married'].fillna('Unknown') 
+data['Property_Area'] =data['Property_Area'].fillna('Unknown') 
+data['Self_Employed'] =data['Self_Employed'].fillna('Unknown') 
+data['Loan_ID'] =data['Loan_ID'].fillna('Unknown') 
+data['Credit_History'] =data['Credit_History'].fillna(1)
+data['Dependents'] =data['Dependents'].fillna('Unknown')
+
+
+
+### replacing continous features with the mean for missing values 
+
+data['LoanAmount'].describe()
+from statistics import mean, median
+median(data.LoanAmount)
+data= data.fillna({'LoanAmount': data.LoanAmount.median()})
+
+data['LoanAmount'].hist()
+plt.title('Histogram of Loan Amount')
+plt.show()
+
+
+data.boxplot(column  = 'LoanAmount')### 
+   
+###### Frequency Distribution of Features
+
+import seaborn as sns
+corr = data.corr()
+sns.heatmap(corr, 
+            xticklabels=corr.columns.values,
+            yticklabels=corr.columns.values)
+
+pd.scatter_matrix(data, alpha = 0.3, figsize = (14,8), diagonal = 'kde')
+
+############################################# Binning Stage 
+
+### Education 
+
+def coding(col, codeDict):
+  colCoded = pd.Series(col, copy=True)
+  for key, value in codeDict.items():
+    colCoded.replace(key, value, inplace=True)
+  return colCoded
+
+Education_bins = [0,1,2]
+Education_labels = {"Graduate", "Not Graduate"}              
+data['Education_Coded'] = coding(data['Education'], {'Graduate': 0, 'Not Graduate': 1})
+
+data['Education_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Education_Coded')
+plt.title('Education_Coded into Groups')
+plt.legend(Education_labels)
+plt.show()
+
+#### Gender 
+
+Gender_bins = [0,1,2,3]
+Gender_labels = {"Female", "Male", "Unknown"}              
+data['Gender_Coded'] = coding(data['Gender'], {'Female': 0, 'Male': 1, "Unknown": 2})
+
+
+data['Gender_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Gender_Coded')
+plt.title('Gender_Coded into Groups')
+plt.legend(Gender_labels)
+plt.show()
+
+
+##### Loan Amount Term 
+
+Loan_Amount_Term_bins = [0,1,2]
+Loan_Amount_Term_labels = {"360", "Other"}              
+data['Loan_Amount_Term_Coded'] = coding(data['Loan_Amount_Term'], {6.0: 1, 
+    12.0: 1, 36.0:1, 60.0:1, 84.0: 1, 120.0:1, 180.0:1, 240.0:1, 300.0:1, 350.0:1,
+    360.0:0, 480.0:1, "Unknown":1})
+    
+Counter(data['Loan_Amount_Term_Coded'])
+
+data['Loan_Amount_Term_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Loan_Amount_Term_Coded')
+plt.title('Loan_Amount_Term_Coded into Groups')
+plt.legend(Loan_Amount_Term_labels)
+plt.show()
+    
+##### Loan Status (Dependent Variable)
+
+Loan_Status_bins = [0,1,2]
+Loan_Status_labels = {"Approved", "Not Approved"}              
+data['Loan_Status_Coded'] = coding(data['Loan_Status'], {'Y': 0, 'N': 1})
+
+Counter(data['Loan_Status_Coded'])
+
+data['Loan_Status_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Loan_Status_Coded')
+plt.title('Loan_Status_Coded into Groups')
+plt.legend(Loan_Status_labels)
+plt.show()
+
+
+#### Married 
+
+Married_bins = [0,1,2,3]
+Married_labels = {"Married", "Not Married", "Unknown"}              
+data['Married_Coded'] = coding(data['Married'], {'Yes': 0, 'No': 1, "Unknown": 2})
+
+Counter(data['Married_Coded'])
+
+data['Married_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Married_Coded')
+plt.title('Married_Coded into Groups')
+plt.legend(Married_labels)
+plt.show()
+
+#### Property_Area
+
+Property_Area_bins = [0,1,2,4]
+Property_Area_labels = {"Urban", "Semi_Urban", "Rural"}              
+data['Property_Area_Coded'] = coding(data['Property_Area'], {"Urban":0, "Semiurban":1, "Rural":2})
+
+data['Property_Area_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Property_Area_Coded')
+plt.title('Property_Area_Coded into Groups')
+plt.legend(Property_Area_labels)
+plt.show()
+
+#### Self_Employed
+
+Self_bins = [0,1,2,3]
+Self_labels = {"No", "Yes", "Unknown"}              
+data['Self_Employed_Coded'] = coding(data['Self_Employed'], {'Yes': 1, 'No': 0, "Unknown":2})
+
+
+data['Self_Employed_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Self_Employed_Coded')
+plt.title('Self_Employed_Coded into Groups')
+plt.legend(Self_labels)
+plt.show()
+
+##### Credit_History
+
+His_bins = [0,1,2]
+His_labels = {"Not", "Available"}              
+data['Credit_History_Coded'] = coding(data['Credit_History'], {'0.0': 0, '1.0': 1})
+
+
+data['Credit_History_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Credit_History_Coded')
+plt.title('Credit_History_Coded into Groups')
+plt.legend(His_labels)
+plt.show()
+
+######## Dependents
+
+dep_bins = [0,1,2,3]
+dep_labels = {"No Dependents", "1-2","3+", "Unknown"}              
+data['Dependents_Coded'] = coding(data['Dependents'], {'0': 0, '1': 1, '2':1, '3+':2, "Unknown":3})
+
+Counter(data['Dependents_Coded'])
+
+data['Dependents_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Dependents_Coded')
+plt.title('Dependents_Coded into Groups')
+plt.legend(dep_labels)
+plt.show()
+
+###### LoanAmount
+
+Amount_bins = [9, 126, 250, 700]
+Amount_labels = ['Small: 9-125K', 'Mid: 126-249K', 'Large 250-700K']
+data['LoanAmount_Coded'] = pd.cut(data.LoanAmount, bins=[9, 126, 250, 700], labels = Amount_labels, include_lowest=True)
+data['LoanAmount_Coded'] = coding(data['LoanAmount_Coded'], {'Small: 9-125K': 0, 'Mid: 126-249K': 1, 'Large 250-700K': 2})
+
+ax = data['LoanAmount_Coded'].value_counts(sort=False).plot.bar(rot=0, color="b", figsize=(6,4))
+ax.set_xticklabels([c[1:-1].replace(","," to") for c in out.cat.categories])
+plt.ylabel("Frequency")
+plt.ylabel('LoanAmount_Coded')
+plt.title('My title')
+plt.show()
+
+data['LoanAmount_Coded'].describe()
+
+data['LoanAmount_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('LoanAmount_Coded')
+plt.title('LoanAmount_Coded into Groups')
+plt.show()
+
+#########################################################################
+########################################################################
+
+####### Baseline Model  
+
+import statsmodels.api as sm
+
+import statsmodels.formula.api as smf
+
+import seaborn as sns
+
+data.columns
+
+### OLS model to check the effect of the features on the LoanAmount as a DV
+
+result1 = smf.ols('LoanAmount ~ ApplicantIncome + CoapplicantIncome + Education_Coded + Gender_Coded + Loan_Amount_Term_Coded + Loan_Status_Coded + Married_Coded + Property_Area_Coded + Self_Employed_Coded + Credit_History_Coded + Dependents_Coded', data=data).fit()
+print(result1.summary())
+plt.rc('figure', figsize=(12, 7))
+#plt.text(0.01, 0.05, str(model.summary()), {'fontsize': 12}) old approach
+plt.text(0.01, 0.05, str(result1.summary()), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
+plt.axis('off')
+plt.tight_layout()
+plt.savefig('output.png')
+plt.show()#### R-Squared .41
+
+##### OLS model to check the effect of the features on the Loan Status as a DV
+
+
+#### Summing the total amount Income (Applicant Income + Coapplicant Income)
+
+data['Total_Income'] = data.ApplicantIncome + data.CoapplicantIncome
+
+#####
+
+data['Total_Income'].describe()
+median(data.Total_Income)
+
+data['Total_Income'].hist()
+plt.ylabel('Frequency')
+plt.xlabel('Total Income: Applicant + Coapplicant')
+
+bins = [1442, 5000, 10000, 81000]
+labels = ['0-5000', '5001-10000', '10001-81000']
+data['Total_Income_Coded'] = pd.cut(data.Total_Income, bins=[1442, 5000, 10000, 81000], labels = labels, include_lowest=True)
+data['Total_Income_Coded'] = coding(data['Total_Income_Coded'], {"0-5000":0, "5001-10000":1, "10001-81000":2})
+
+ax = data['Total_Income_Group'].value_counts(sort=False).plot.bar(rot=0, color="b", figsize=(6,4))
+ax.set_xticklabels([c[1:-1].replace(","," to") for c in out.cat.categories])
+plt.ylabel("Frequency")
+plt.ylabel('Total_Income_Group')
+plt.title('Total_Income_Group')
+plt.show()
+
+
+
+data['Total_Income_Group'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('Total_Income_Group')
+plt.title('Total_Income_Group into Groups')
+plt.show()
+
+######################### Appliant Income recoded 
+
+data['ApplicantIncome'].describe()
+
+bins = [0, 3800, 5516, 81000]
+labels = ['0-3800', '3801-5500', '5501-81000']
+data['ApplicantIncome_Coded'] = pd.cut(data.ApplicantIncome, bins=[0, 3800, 5500, 81000], labels = labels, include_lowest=True)
+data['ApplicantIncome_Coded'] = coding(data['ApplicantIncome_Coded'], {'0-3800': 0, '3801-5500': 1, '5501-81000': 2})
+
+ax = data['ApplicantIncome_Coded'].value_counts(sort=False).plot.bar(rot=0, color="b", figsize=(6,4))
+ax.set_xticklabels([c[1:-1].replace(","," to") for c in out.cat.categories])
+plt.ylabel("Frequency")
+plt.ylabel('ApplicantIncome_Coded')
+plt.title('ApplicantIncome_Coded')
+plt.show()
+
+data['ApplicantIncome_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('ApplicantIncome_Coded')
+plt.title('ApplicantIncome_Coded into Groups')
+plt.show()
+
+############# CoApplicantIncome
+data['CoapplicantIncome'].describe()
+
+bins = [0, 1110, 2365, 41667]
+labels = ['0-1110K', '1111-2365K', '2366-41667K']
+data['CoapplicantIncome_Coded'] = pd.cut(data.CoapplicantIncome, bins=[0, 1110, 2365, 41667], labels = labels, include_lowest=True)
+data['CoapplicantIncome_Coded'] = coding(data['CoapplicantIncome_Coded'], {'0-1110K':0, '1111-2365K':1, '2366-41667K':2})
+
+
+ax = data['CoapplicantIncome_Coded'].value_counts(sort=False).plot.bar(rot=0, color="b", figsize=(6,4))
+ax.set_xticklabels([c[1:-1].replace(","," to") for c in out.cat.categories])
+plt.ylabel("Frequency")
+plt.ylabel('CoapplicantIncome_Coded')
+plt.title('CoapplicantIncome_Coded')
+plt.show()
+
+data['CoapplicantIncome_Coded'].value_counts().plot(kind='bar')
+plt.grid(axis='y', alpha=0.75)
+plt.ylabel('Frequency')
+plt.xlabel('CoapplicantIncome_Coded')
+plt.title('CoapplicantIncome_Coded into Groups')
+plt.show()
+
+
+#########
+
+result1 = smf.ols('LoanAmount_Coded  ~  Loan_Status_Coded + Total_Income_Coded + ApplicantIncome_Coded + CoapplicantIncome_Coded + Education_Coded + Gender_Coded + Loan_Amount_Term_Coded + Married_Coded + Property_Area_Coded + Self_Employed_Coded + Credit_History_Coded + Dependents_Coded', data=data).fit()
+print(result1.summary())
+plt.rc('figure', figsize=(12, 7))
+plt.text(0.01, 0.05, str(result1.summary()), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
+plt.axis('off')
+plt.tight_layout()
+plt.savefig('output.png')### R-Squared .38
+
+
+result1 = smf.logit('Loan_Status_Coded ~ C(LoanAmount_Coded) + C(Total_Income_Coded) + C(ApplicantIncome_Coded) + C(CoapplicantIncome_Coded) + C(Education_Coded) + C(Gender_Coded) + C(Loan_Amount_Term_Coded) + C(Married_Coded) + C(Property_Area_Coded) + C(Self_Employed_Coded) + C(Credit_History_Coded) + C(Dependents_Coded)', data=data).fit()
+print(result1.summary())
+plt.rc('figure', figsize=(12, 7))
+plt.text(0.01, 0.05, str(result1.summary()), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
+plt.axis('off')
+plt.tight_layout()
+plt.savefig('output.png')### R-Squared .31 - for only the training set
+
+######################################### More Visualizations 
+
+data['Credit_History1'] = coding(data['Credit_History'], {0.0:'Not', 1.0:'Available'})
+Vis1 = pd.crosstab([data['Credit_History1'], data['Gender']], data['Loan_Status'])
+Vis1.plot(kind='bar', stacked = False, color=['green', 'blue'], grid = False)
+
+Vis2 = pd.crosstab([data['Credit_History1'], data['Property_Area']], data['Loan_Status'])
+Vis2.plot(kind='bar', stacked = True, color=['green', 'blue'], grid = False)
+
+sns.jointplot(x="Credit_History_Coded", y="Loan_Status_Coded", data=data, kind="reg");
+plt.show()
+
+sns.jointplot(x="Total_Income_Coded", y="Loan_Status_Coded", data=data, kind="reg");
+plt.show()
+
+sns.jointplot(x="Education_Coded", y="Loan_Status_Coded", data=data, kind="reg");
+plt.show()
+
+sns.jointplot(x="Married_Coded", y="Loan_Status_Coded", data=data, kind="reg");
+plt.show()
+
+##################################################################################################################
+############################################### Classification Models ################################################
+##################################################################################################################
+
+### spliting the data again into the original settings of traing set and test set 
+train = data.loc[data['Trainsource']=="train"]
+
+test = data.loc[data['Testsource']=="test"]
+
+#Export files as modified versions:
+train.to_csv("train_modified.csv",index=False)
+test.to_csv("test_modified.csv",index=False)
+
+data.to_excel('data1.xlsx')
+
+list(data.columns)
+list(train.columns)
+list(test.columns)
+
+X_train = train.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+X_test = test.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+
+y_train = train.iloc[:,[18]].values ### Loan_Status_known 
+y_test = test.iloc[:,[18]].values ### Loan_Status_unknown 
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.cross_validation import cross_val_score
+from sklearn.grid_search import GridSearchCV
+from sklearn.metrics import accuracy_score
+
+############################################################################################3
+################################################ KNN Model with loan_status Unkown
+
+classifier = KNeighborsClassifier(n_neighbors = 5, metric = 'minkowski', p = 2)
+KNN_model = classifier.fit(X_train, y_train)
+KNN_Score = classifier.score(X_train, y_train)##### KNN score 0.81 
+KNN_y_pred = classifier.predict(X_test)# Predicition of y_test
+KNN_y_pred_proba = classifier.predict_proba(X_test)# Predicition of y_test
+
+print(np.unique(KNN_y_pred))
+Counter(KNN_y_pred)
+
+
+X = np.concatenate((X_train, X_test), axis=0)
+y = np.concatenate((y_train, KNN_y_pred), axis=None)### replacing the missing values with the predicted values of KNN model 
+
+from sklearn.model_selection import train_test_split 
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size= 0.2, random_state = 0) 
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.cross_validation import cross_val_score
+from sklearn.grid_search import GridSearchCV
+
+
+classifier = KNeighborsClassifier(n_neighbors = 5, metric = 'minkowski', p = 2)
+classifier.fit(X_train, y_train)
+KNN_y = classifier.score(X_test,y_test)### 0.82
+y_pred = classifier.predict(X_test)# Predicting the Test set results
+
+
+#define the model and parameters for Gridsearch 
+knn = KNeighborsClassifier()
+
+parameters = {'n_neighbors':[4,5,6,7],
+              'leaf_size':[1,3,5],
+              'algorithm':['auto', 'kd_tree'],
+              'n_jobs':[-1]}
+
+
+model = GridSearchCV(knn, param_grid=parameters)
+model.fit(X_train,y_train.ravel())
+model.score(X_train,y_train.ravel())###0.845
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix
+KNN_cm = confusion_matrix(y_test, y_pred)
+
+from sklearn.model_selection import cross_val_score
+Accuracies_scores = cross_val_score(model, X_train, y_train.ravel(), cv=5)
+
+
+
+#########################################################################################################
+############################ Logistic Regression model
+
+X_train = train.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+X_test = test.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+
+y_train = train.iloc[:,[18]].values ### Loan_Status_known 
+y_test = test.iloc[:,[18]].values ### Loan_Status_unknown 
+
+from sklearn.linear_model import LogisticRegression
+regressor = LogisticRegression()
+Logit = regressor.fit(X_train, y_train)
+Logit_Score = regressor.score(X_train, y_train)##### logit score 0.81 
+Logit_y_pred = regressor.predict(X_test)# Predicition of y_test
+Logit_y_pred_proba = regressor.predict_proba(X_test)# Predicition of y_test
+
+Counter(Logit_y_pred)
+
+
+X = np.concatenate((X_train, X_test), axis=0)
+y = np.concatenate((y_train, Logit_y_pred), axis=None)### replacing the missing values with the predicted values of KNN model 
+
+from sklearn.model_selection import train_test_split 
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size= 0.2, random_state = 0) 
+Logit = regressor.fit(X_train, y_train)
+Logit_Score = regressor.score(X_test, y_test)##### logit score 0.83 
+Logit_y_pred = regressor.predict(X_test)# Predicition of y_test
+Logit_y_pred_proba = regressor.predict_proba(X_test)# Predicition of y_test
+
+from sklearn.metrics import confusion_matrix
+logit_cm = confusion_matrix(y_test, Logit_y_pred)
+
+from sklearn.model_selection import cross_val_score
+Accuracies_scores = cross_val_score(Logit, X_train, y_train, cv=5)
+
+# Gridsearch for Logistics  
+from sklearn import linear_model, datasets
+logistic = linear_model.LogisticRegression()
+penalty = ['l1', 'l2']
+C = np.logspace(0, 4, 10)
+hyperparameters = dict(C=C, penalty=penalty)
+clf = GridSearchCV(logistic, hyperparameters, cv=5, verbose=0)
+best_model = clf.fit(X_train, y_train.ravel())
+best_model.score(X_train,y_train.ravel())### 0.81
+print('Best Penalty:', best_model.best_estimator_.get_params()['penalty'])
+print('Best C:', best_model.best_estimator_.get_params()['C'])
+best_model.predict()
+
+#############################################################################
+############################## Random Forest model 
+
+X_train = train.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+X_test = test.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+
+y_train = train.iloc[:,[18]].values ### Loan_Status_known 
+y_test = test.iloc[:,[18]].values ### Loan_Status_unknown 
+
+# Fitting Random Forest Classification to the Training set
+from sklearn.ensemble import RandomForestClassifier
+classifier = RandomForestClassifier(n_estimators = 10, criterion = 'entropy', random_state = 0)
+RF_model = classifier.fit(X_train, y_train)
+RF_Score = classifier.score(X_train, y_train)##### Random Forest score 0.94 
+RF_y_pred = classifier.predict(X_test)# Predicition of y_test
+RF_y_pred_proba = classifier.predict_proba(X_test)# Predicition of y_test
+
+Counter(RF_y_pred)
+
+
+X = np.concatenate((X_train, X_test), axis=0)
+y = np.concatenate((y_train, RF_y_pred), axis=None)### replacing the missing values with the predicted values of KNN model 
+
+
+from sklearn.model_selection import train_test_split 
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size= 0.2, random_state = 0) 
+classifier = RandomForestClassifier(n_estimators = 10, criterion = 'entropy', random_state = 0)
+RF_model = classifier.fit(X_train, y_train)
+RF_Score = classifier.score(X_test, y_test)##### Random Forest score 0.87 
+RF_y_pred = classifier.predict(X_test)# Predicition of y_test
+RF_y_pred_proba = classifier.predict_proba(X_test)# Predicition of y_test
+
+
+from sklearn.metrics import confusion_matrix
+RF_cm = confusion_matrix(y_test, RF_y_pred)
+
+from sklearn.model_selection import cross_val_score
+Accuracies_scores = cross_val_score(classifier, X_train, y_train, cv=5)
+
+###############################################################
+################################ Perceptron Model 
+
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_digits
+from sklearn.linear_model import Perceptron
+
+X_train = train.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+X_test = test.iloc[:, [15,16, 17, 19,20,21,22,23,24,26,27,28]].values
+
+y_train = train.iloc[:,[18]].values ### Loan_Status_known 
+y_test = test.iloc[:,[18]].values ### Loan_Status_unknown 
+
+
+classifier = Perceptron(n_iter=300, eta0 =0.25, random_state=0)
+Perceptron_model = classifier.fit(X_train, y_train)
+Perceptron_Score = classifier.score(X_train, y_train)##### Perceptron score 0.64 
+Perceptron_y_pred = classifier.predict(X_test)# Predicition of y_test
+print(classifier.intercept_, classifier.coef_)
+
+Counter(Perceptron_y_pred)
+
+X = np.concatenate((X_train, X_test), axis=0)
+y = np.concatenate((y_train, Perceptron_y_pred), axis=None)### replacing the missing values with the predicted values of KNN model 
+
+X_train, X_test, y_train, y_test = train_test_split(X,y,random_state=0)
+classifier = Perceptron(n_iter=300, eta0 =0.25, random_state=0)
+Perceptron_model = classifier.fit(X_train, y_train)
+Perceptron_Score = classifier.score(X_test, y_test)##### Perceptron score 0.78 
+Perceptron_y_pred = classifier.predict(X_test)# Predicition of y_test
+
+from sklearn.metrics import confusion_matrix
+Perceptron_cm = confusion_matrix(y_test, Perceptron_y_pred)
+
+
+from sklearn.model_selection import cross_val_score
+Accuracies_scores = cross_val_score(Perceptron_model, X_train, y_train.ravel(), cv=5)
+
+#####################################################################################
+####################################### SVM with GridSearch 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 0)
+
+from sklearn.svm import SVC
+classifier = SVC(kernel = 'linear', random_state = 0)
+classifier.fit(X_train, y_train)
+classifier.score(X_train, y_train)###Kernel = linear #####0.84
+
+classifier = SVC(kernel = 'rbf', random_state = 0)
+classifier.fit(X_train, y_train)
+classifier.score(X_train, y_train)###Kernel = rbf #####0.84
+
+
+from sklearn.model_selection import GridSearchCV
+params = {
+            'C':[0.1, 1, 10],
+            'kernel':['linear', 'poly', 'rbf'],
+            'degree':[2,3,4],
+            'gamma':[0.001, 0.01, 0.1],
+            'tol':[0.001, 0.01, 0.1]        
+        }
+
+
+
+from sklearn.svm import SVC
+clf = SVC()
+svm = GridSearchCV(clf,params)
+svm.fit(X_train,y_train.ravel())
+svm.best_score_#####0.84
+svm.best_params_### {'C': 0.1, 'degree': 2, 'gamma': 0.001, 'kernel': 'linear', 'tol': 0.001}
+
+svm_best = SVC(C = 10, degree= 2, gamma = 0.0001, kernel= 'rbf')
+svm_best.fit(X_train,y_train)
+y_pred = svm_best.predict(X_test)
+svm_best.score(X_test,y_test)##0.751
+
+#######MLP
+from sklearn.neural_network import MLPClassifier
+nn = MLPClassifier(hidden_layer_sizes=(10,10), activation='relu',
+                   solver='sgd', max_iter = 10000)
+nn.fit(X_train,y_train)
+nn.score(X_train,y_train)### 0.81
+
+# Learning & Validation Curves 
+
+from sklearn.model_selection import validation_curve
+from sklearn.linear_model import Ridge
+
+train_scores, valid_scores = validation_curve(Ridge(), X, y, "alpha", np.logspace(-7, 3, 3), cv=5)
+train_scores            
+valid_scores  
+
+from sklearn.model_selection import learning_curve
+from sklearn.svm import SVC
+
+train_sizes, train_scores, valid_scores = learning_curve(SVC(kernel='linear'), X, y, train_sizes=[50, 80, 110], cv=5)
+train_sizes            
+train_scores           
+valid_scores        
+
+#########################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
